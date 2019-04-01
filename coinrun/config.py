@@ -28,7 +28,7 @@ class ConfigSingle(object):
 
         # The game to be played.
         # One of {'standard', 'platform', 'maze'} (for CoinRun, CoinRun-Platforms, Random-Mazes)
-        type_keys.append(('gamet', 'game_type', str, 'standard', True)) 
+        type_keys.append(('gamet', 'game_type', str, 'standard', True))
 
         # The convolutional architecture to use
         # One of {'nature', 'impala', 'impalalarge'}
@@ -207,7 +207,7 @@ class ConfigSingle(object):
 
         if restore_id is None:
             return None
-        
+
         filename = Config.get_save_file_for_rank(0, self.process_field(restore_id), base_name=base_name)
 
         return filename
@@ -245,7 +245,7 @@ class ConfigSingle(object):
         _args_dict.update(self.args_dict)
 
         return _args_dict
-        
+
     def initialize_args(self, use_cmd_line_args=True, **kwargs):
         default_args = {}
 

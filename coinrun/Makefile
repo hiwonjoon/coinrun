@@ -4,7 +4,7 @@ OBJDIRD=.build-debug
 
 ifeq ($(UNAME),Linux)
   PKG  =pkg-config
-  MOC  =moc
+  MOC  =moc-qt5
   LIBS =-L/usr/lib64 -lm -lGL -lGLU
   INC  =-I/usr/include
   SO=.so

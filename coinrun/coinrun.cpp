@@ -167,6 +167,7 @@ class VectorOfStates;
 class RandGen {
 public:
   bool is_seeded = false;
+  int _seed;
   std::mt19937 stdgen;
 
   int randint(int low, int high) {
@@ -189,6 +190,7 @@ public:
 
   void seed(int seed) {
     stdgen.seed(seed);
+    _seed = seed;
     is_seeded = true;
   }
 };
@@ -235,6 +237,7 @@ public:
 
 class Maze {
 public:
+  int level_seed;
   int spawnpos[2];
   int w, h;
   int game_type;
@@ -302,10 +305,10 @@ public:
     } else {
       default_zoom = 5.0;
     }
-      
+
     gravity = .2;
     air_control = .15;
-    
+
     max_jump = 1.5;
     max_speed = .5;
     mix_rate = .2;
@@ -360,6 +363,7 @@ public:
   }
 
   void generate_coin_maze() {
+    maze->level_seed = rand_gen._seed;
     dif = choose_difficulty(MAX_MAZE_DIFFICULTY);
     maze_dim = 2 * (randn(3) + 3 * (dif - 1) + 1) + 1;
 
@@ -367,7 +371,7 @@ public:
     maze->fill_elem(MAZE_OFFSET, MAZE_OFFSET, 1, 1, SPACE);
 
     std::vector<Wall> walls;
-    
+
     num_free_cells = 0;
 
     std::set<int> s0;
@@ -419,7 +423,7 @@ public:
             s1.insert(center);
 
             for (int child : s1) {
-                cell_sets[child] = s1;  
+                cell_sets[child] = s1;
             }
         }
 
@@ -689,6 +693,7 @@ public:
 
   void generate_coins_on_platforms()
   {
+    maze->level_seed = rand_gen._seed;
     maze->spawnpos[0] = 1 + randn(maze->w - 2);
     maze->spawnpos[1] = 1;
 
@@ -709,6 +714,7 @@ public:
 
   void generate_coin_to_the_right(int game_type)
   {
+    maze->level_seed = rand_gen._seed;
     maze->spawnpos[0] = 1;
     maze->spawnpos[1] = 1;
     maze->coins = 1;
@@ -722,7 +728,7 @@ public:
     int danger_type = randn(3);
 
     char secondary_monster_type = WALKING_MONSTER;
-    int max_dy = (maze->max_dy - .5); 
+    int max_dy = (maze->max_dy - .5);
     int max_dx = (maze->max_dx - .5);
 
     for (int i = 0; i < num_sections; i++) {
@@ -1564,7 +1570,7 @@ void paint_the_world(
       QImage img = f == ground_theme->walls.end() ? ground_theme->default_wall : f->second;
       QRectF dst = QRectF(kx*x + dx, WINH - ky*y + dy, kx + .5, ky + .5);
       dst.adjust(-0.1, -0.1, +0.1, +0.1); // here an attempt to fix subpixel seams that appear on the image, especially lowres
-      
+
       if (maze_render) {
         if (is_coin(wkey)) {
           p.fillRect(dst, QColor(255, 255, 0));
@@ -1608,7 +1614,7 @@ void paint_the_world(
   } else {
     QImage img = agent->picture(active_theme);
     QRectF dst = QRectF(kx * agent->x + dx, WINH - ky * (agent->y+1) + dy, kx, 2 * ky);
-    p.drawImage(dst, img);  
+    p.drawImage(dst, img);
   }
 
   int monsters_count = maze->monsters.size();
@@ -1931,7 +1937,8 @@ void vec_wait(
   uint8_t* obs_rgb,
   uint8_t* obs_hires_rgb,
   float* rew,
-  bool* done)
+  bool* done,
+  int* cur_seed)
 {
   std::shared_ptr<VectorOfStates> vstate = vstate_find(handle);
   while (1) {
@@ -1961,6 +1968,7 @@ void vec_wait(
 
     rew[e] = a.reward;
     done[e] = a.game_over;
+    cur_seed[e] = state_e->maze->level_seed;
     a.reward = 0;
     a.game_over = false;
   }
@@ -2107,7 +2115,8 @@ public:
     uint8_t bufrgb[RES_W * RES_H * 3];
     float bufrew[1];
     bool bufdone[1];
-    vec_wait(viz->control_handle, bufrgb, 0, bufrew, bufdone);
+    int bufseed[1];
+    vec_wait(viz->control_handle, bufrgb, 0, bufrew, bufdone, bufseed);
     // fprintf(stderr, "%+0.2f %+0.2f %+0.2f\n", bufvel[0], bufvel[1], bufvel[2]);
   }
 

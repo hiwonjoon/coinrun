@@ -84,6 +84,7 @@ lib.vec_wait.argtypes = [
     npct.ndpointer(dtype=np.uint8, ndim=4),    # larger rgb for render()
     npct.ndpointer(dtype=np.float32, ndim=1),  # rew
     npct.ndpointer(dtype=np.bool, ndim=1),     # done
+    npct.ndpointer(dtype=np.int32 , ndim=1),   # seed
     ]
 
 already_inited = False
@@ -146,6 +147,7 @@ class CoinRunVecEnv(VecEnv):
 
         self.buf_rew = np.zeros([num_envs], dtype=np.float32)
         self.buf_done = np.zeros([num_envs], dtype=np.bool)
+        self.buf_seed = np.zeros([num_envs], dtype=np.int32)
         self.buf_rgb   = np.zeros([num_envs, self.RES_H, self.RES_W, 3], dtype=np.uint8)
         self.hires_render = Config.IS_HIGH_RES
         if self.hires_render:
@@ -167,7 +169,6 @@ class CoinRunVecEnv(VecEnv):
             lump_n,
             self.hires_render,
             default_zoom)
-        self.dummy_info = [{} for _ in range(num_envs)]
 
     def __del__(self):
         if hasattr(self, 'handle'):
@@ -195,22 +196,28 @@ class CoinRunVecEnv(VecEnv):
         lib.vec_step_async_discrete(self.handle, actions)
 
     def step_wait(self):
+        nenv = len(self.buf_rew)
+
         self.buf_rew = np.zeros_like(self.buf_rew)
         self.buf_done = np.zeros_like(self.buf_done)
+        self.buf_seed = np.zeros_like(self.buf_seed)
 
         lib.vec_wait(
             self.handle,
             self.buf_rgb,
             self.buf_render_rgb,
             self.buf_rew,
-            self.buf_done)
+            self.buf_done,
+            self.buf_seed)
 
         obs_frames = self.buf_rgb
 
         if Config.USE_BLACK_WHITE:
             obs_frames = np.mean(obs_frames, axis=-1).astype(np.uint8)[...,None]
 
-        return obs_frames, self.buf_rew, self.buf_done, self.dummy_info
+        self.info = [{'seed':self.buf_seed[n]} for n in range(nenv)]
+
+        return obs_frames, self.buf_rew, self.buf_done, self.info
 
 def make(env_id, num_envs, **kwargs):
     assert env_id in game_versions, 'cannot find environment "%s", maybe you mean one of %s' % (env_id, list(game_versions.keys()))
